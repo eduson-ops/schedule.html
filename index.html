@@ -59,6 +59,25 @@ button{cursor:pointer;border:none;font-family:inherit}
 .copy-btn{padding:2px 8px;border-radius:5px;background:#1e293b;color:#94a3b8;font-size:10px;font-weight:600;border:1px solid #334155;cursor:pointer;transition:all .15s;white-space:nowrap}
 .copy-btn:hover{background:#334155;color:#e2e8f0}
 .copy-btn.copied{background:#16a34a20;color:#4ade80;border-color:#4ade8040}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
+.popup{background:#1e293b;border-radius:16px;padding:20px;max-width:380px;width:100%;border:1px solid #334155;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.popup-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.popup-name{font-size:18px;font-weight:800;color:#f8fafc}
+.popup-close{width:28px;height:28px;border-radius:6px;background:#334155;color:#94a3b8;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-weight:700;flex-shrink:0}
+.popup-close:hover{background:#475569}
+.popup-section{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #334155}
+.popup-section:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.popup-label{font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.popup-row{display:flex;align-items:center;gap:8px;font-size:13px;color:#e2e8f0;margin-bottom:4px}
+.popup-row:last-child{margin-bottom:0}
+.popup-icon{font-size:14px;flex-shrink:0;width:18px;text-align:center}
+.popup-link{color:#60a5fa;text-decoration:none;border-bottom:1px dashed #3b82f6}
+.popup-link:hover{color:#93c5fd}
+.popup-empty{color:#475569;font-size:12px;font-style:italic}
+.name-btn{background:none;border:none;cursor:pointer;color:inherit;font:inherit;font-weight:inherit;padding:0;border-bottom:1px dashed #475569;transition:border-color .15s;text-align:left}
+.name-btn:hover{border-bottom-color:#60a5fa;color:#93c5fd}
+.amo-link{color:inherit;text-decoration:none;border-bottom:1px dashed #475569;transition:border-color .15s;cursor:pointer}
+.amo-link:hover{border-bottom-color:#60a5fa;color:#93c5fd}
 .teacher-rows{padding:0 16px 12px}
 .teacher-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid #334155}
 .tr-day{width:26px;text-align:center;font-size:10px;font-weight:700;border-radius:3px;padding:1px 0}
@@ -153,6 +172,16 @@ function proc(text) {
   const iCh=fc(hdr,"ФИО ребенка","Имя ребенка");
   const iCo=fc(hdr,"Комментарий");
   const iZ=fc(hdr,"Ссылка на занятия","Ссылка на занятие","Zoom","Ссылка на урок","ссылка на встречу","meet");
+  const iVK=fc(hdr,"Ссылка на группу","ВК","VK","Группа VK","Группа ВК");
+  const iAge=fc(hdr,"Возраст","Дата рождения","age");
+  const iPay=fc(hdr,"Сумма оплаты","Оплата","Сумма","Стоимость");
+  const iPayCnt=fc(hdr,"Кол-во уроков","Количество уроков","Оплачено уроков");
+  const iPayDate=fc(hdr,"Дата оплаты","Дата платежа");
+  const iTg=fc(hdr,"Telegram","Тг","TG","Телеграм");
+  const iEmail=fc(hdr,"Email","Почта","E-mail");
+  const iPhone=fc(hdr,"Телефон","Phone","Номер телефона");
+  const iParentName=fc(hdr,"ФИО родителя","Имя родителя","Родитель");
+  const iA=fc(hdr,"Ссылка на AMO","AMO","Ссылка на сделку","amo","amoCRM");
   const dbg = `${rows.length} строк | Преп=${iT>=0?"✓":"✗"} Группа=${iG>=0?"✓":"✗"} Расписание=${iS>=0?"✓":"✗"} Ребёнок=${iCh>=0?"✓":"✗"} | ${hdr.slice(0,6).join(", ")}`;
   const entries = [];
   for (let i=1;i<rows.length;i++) {
@@ -175,6 +204,16 @@ function proc(text) {
         teacher:teacher||"Не назначен", product,
         format:format.includes("Индив")?"Индив.":format.includes("Груп")?"Группа":format,
         zoom:iZ>=0?(r[iZ]||""):"",
+        amo:iA>=0?(r[iA]||""):"",
+        vk:iVK>=0?(r[iVK]||""):"",
+        age:iAge>=0?(r[iAge]||""):"",
+        pay:iPay>=0?(r[iPay]||""):"",
+        payCnt:iPayCnt>=0?(r[iPayCnt]||""):"",
+        payDate:iPayDate>=0?(r[iPayDate]||""):"",
+        tg:iTg>=0?(r[iTg]||""):"",
+        email:iEmail>=0?(r[iEmail]||""):"",
+        phone:iPhone>=0?(r[iPhone]||""):"",
+        parentName:iParentName>=0?(r[iParentName]||""):"",
       });
     }
   }
@@ -214,6 +253,41 @@ function copyZoom(url, btnId) {
     const btn=document.getElementById(btnId);
     if(btn){btn.textContent="✓ Скопировано";btn.classList.add("copied");setTimeout(()=>{btn.textContent="🔗 Скопировать";btn.classList.remove("copied")},2000);}
   });
+}
+
+
+function openPopupData(e) {
+  if(!e) return;
+  const el = document.getElementById('student-popup');
+  if(el) el.remove();
+
+  const row = (icon, text) => text ? `<div class="popup-row"><span class="popup-icon">${icon}</span><span>${text}</span></div>` : '';
+  const rowLink = (icon, text, href) => href ? `<div class="popup-row"><span class="popup-icon">${icon}</span><a class="popup-link" href="${href}" target="_blank">${text}</a></div>` : '';
+
+  const amoRow    = rowLink('🔗', 'Открыть в AMO CRM', e.amo);
+  const ageRow    = row('🎂', e.age);
+  const payRow    = e.pay ? row('💳', e.pay + (e.payCnt?' · '+e.payCnt+' ур.':'') + (e.payDate?' · '+e.payDate:'')) : '';
+  const vkRow     = rowLink('💬', 'Группа ВКонтакте', e.vk);
+  const nameRow   = row('👤', e.parentName || e.parent);
+  const phoneRow  = row('📞', e.phone);
+  const tgRow     = row('✈️', e.tg);
+  const emailRow  = row('📧', e.email);
+
+  const hasMain   = amoRow || ageRow || payRow || vkRow;
+  const hasParent = nameRow || phoneRow || tgRow || emailRow;
+
+  const html = '<div class="overlay" id="student-popup" onclick="if(event.target.id===\'student-popup\')this.remove()">'
+    + '<div class="popup">'
+    + '<div class="popup-header">'
+    + '<div class="popup-name">' + e.child + '</div>'
+    + '<button class="popup-close" onclick="document.getElementById(\'student-popup\').remove()">✕</button>'
+    + '</div>'
+    + (hasMain ? '<div class="popup-section"><div class="popup-label">Ученик</div>' + amoRow + ageRow + payRow + vkRow + '</div>' : '')
+    + (hasParent ? '<div class="popup-section"><div class="popup-label">Родитель</div>' + nameRow + phoneRow + tgRow + emailRow + '</div>' : '')
+    + (!hasMain && !hasParent ? '<div class="popup-empty">Дополнительных данных нет</div>' : '')
+    + '</div></div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
 }
 
 async function load() {
@@ -344,7 +418,7 @@ function render() {
         html+=`<div class="lesson-row" style="${i===ent.length-1?"border-bottom:none":""}">
           <span class="lesson-time" style="color:${c.a}">${e.time}</span>
           <div>
-            <div class="lesson-name">${e.child}${e.sc>1?`<span style="color:#64748b;font-weight:400"> (${e.sc})</span>`:""}${badgeHtml(e.product)}</div>
+            <div class="lesson-name"><button class="name-btn" onclick="openPopupData(this._e)" onmousedown="this._e=${JSON.stringify(e)}}">${e.child}</button>${e.sc>1?`<span style="color:#64748b;font-weight:400"> (${e.sc})</span>`:""}${badgeHtml(e.product)}</div>
             <div class="lesson-meta">${e.group} • ${e.teacher} • ${e.format}${e.zoom?` <button id="cb-w-${i}-${day.replace(/\s/g,'')}" class="copy-btn" onclick="copyZoom('${e.zoom.replace(/'/g,"\\'")}','cb-w-${i}-${day.replace(/\s/g,'')}')">🔗 Скопировать</button>`:""}</div>
           </div>
         </div>`;
@@ -365,7 +439,7 @@ function render() {
             <div class="tz">МСК</div>
           </div>
           <div>
-            <div class="day-card-name">${e.child}${e.sc>1?`<span class="day-card-cnt"> — ${e.sc} уч.</span>`:""}</div>
+            <div class="day-card-name"><button class="name-btn" onclick="openPopupData(this._e)" onmousedown="this._e=${JSON.stringify(e)}}">${e.child}</button>${e.sc>1?`<span class="day-card-cnt"> — ${e.sc} уч.</span>`:""}</div>
             <div class="tags">${tagHtml(e.product)}<span class="tag tag-gray">${e.format}</span><span class="tag tag-blue">${e.group}</span></div>
             <div class="teacher">👩‍🏫 ${e.teacher}${e.zoom?` <button id="cb-d-${i}" class="copy-btn" onclick="copyZoom('${e.zoom.replace(/'/g,"\\'")}','cb-d-${i}')">🔗 Скопировать</button>`:""}</div>
           </div>
@@ -392,7 +466,7 @@ function render() {
           html+=`<div class="teacher-row">
             <span class="tr-day" style="background:${c.a}30;color:${c.a}">${e.ds}</span>
             <span class="tr-time" style="color:${c.a}">${e.time}</span>
-            <span class="tr-child">${e.child}</span>
+            <span class="tr-child"><button class="name-btn" onclick="openPopupData(this._e)" onmousedown="this._e=${JSON.stringify(e)}}">${e.child}</button></span>
             ${PB[e.product]?`<span class="badge" style="background:${PB[e.product].bg};color:${PB[e.product].c}">${e.product}</span>`:""}
             <span class="tr-group">${e.group}</span>
             ${e.zoom?`<button id="cb-t-${e.time.replace(':','')}-${e.group.replace(/\s/g,'')}" class="copy-btn" onclick="copyZoom('${e.zoom.replace(/'/g,"\\'")}','cb-t-${e.time.replace(':','')}-${e.group.replace(/\s/g,'')}')">🔗</button>`:""}
