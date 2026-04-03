@@ -56,6 +56,9 @@ button{cursor:pointer;border:none;font-family:inherit}
 .teacher-sub{font-size:10px;color:#94a3b8;margin-top:1px}
 .teacher-cnt{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#334155;font-size:15px;font-weight:900;color:#94a3b8}
 .teacher-cnt.open{background:#3b82f6;color:#fff}
+.copy-btn{padding:2px 8px;border-radius:5px;background:#1e293b;color:#94a3b8;font-size:10px;font-weight:600;border:1px solid #334155;cursor:pointer;transition:all .15s;white-space:nowrap}
+.copy-btn:hover{background:#334155;color:#e2e8f0}
+.copy-btn.copied{background:#16a34a20;color:#4ade80;border-color:#4ade8040}
 .teacher-rows{padding:0 16px 12px}
 .teacher-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid #334155}
 .tr-day{width:26px;text-align:center;font-size:10px;font-weight:700;border-radius:3px;padding:1px 0}
@@ -95,7 +98,7 @@ const DC = {
   "Воскресенье":{a:"#f472b6",b:"#83184380"},
 };
 const PB = {"Python":{bg:"#1e40af",c:"#dbeafe"},"Scratch":{bg:"#b45309",c:"#fef3c7"}};
-const BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT25E4I1fZ4JTPFgPf6CmAUBP-AZugF_qgGTubKybfTSiZ8YiuszkTLAM_h5iFZ_8dk6NCZtZbKElbu/pub?output=csv";
+const BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT25E4I1fZ4JTPFgPf6CmAUBP-AZugF_qgGTubKybfTSiZ8YiuszkTLAM_h5iFZ_8dk6NCZtZbKElbu/pub?gid=218134507&single=true&output=csv";
 const PROXIES = [
   BASE,
   `https://corsproxy.io/?${encodeURIComponent(BASE)}`,
@@ -149,6 +152,7 @@ function proc(text) {
   const iPr=fc(hdr,"Имя родителя");
   const iCh=fc(hdr,"ФИО ребенка","Имя ребенка");
   const iCo=fc(hdr,"Комментарий");
+  const iZ=fc(hdr,"Ссылка на занятие","Zoom","Ссылка на урок","ссылка на встречу","meet");
   const dbg = `${rows.length} строк | Преп=${iT>=0?"✓":"✗"} Группа=${iG>=0?"✓":"✗"} Расписание=${iS>=0?"✓":"✗"} Ребёнок=${iCh>=0?"✓":"✗"} | ${hdr.slice(0,6).join(", ")}`;
   const entries = [];
   for (let i=1;i<rows.length;i++) {
@@ -170,6 +174,7 @@ function proc(text) {
         group:group.trim(), child:child||"—", parent,
         teacher:teacher||"Не назначен", product,
         format:format.includes("Индив")?"Индив.":format.includes("Груп")?"Группа":format,
+        zoom:iZ>=0?(r[iZ]||""):"",
       });
     }
   }
@@ -197,6 +202,18 @@ function dedup(entries) {
     }
   }
   return r;
+}
+
+function copyZoom(url, btnId) {
+  if(!url){alert("Ссылка не указана");return;}
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn=document.getElementById(btnId);
+    if(btn){btn.textContent="✓ Скопировано";btn.classList.add("copied");setTimeout(()=>{btn.textContent="🔗 Скопировать";btn.classList.remove("copied")},2000);}
+  }).catch(()=>{
+    const ta=document.createElement("textarea");ta.value=url;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);
+    const btn=document.getElementById(btnId);
+    if(btn){btn.textContent="✓ Скопировано";btn.classList.add("copied");setTimeout(()=>{btn.textContent="🔗 Скопировать";btn.classList.remove("copied")},2000);}
+  });
 }
 
 async function load() {
@@ -328,7 +345,7 @@ function render() {
           <span class="lesson-time" style="color:${c.a}">${e.time}</span>
           <div>
             <div class="lesson-name">${e.child}${e.sc>1?`<span style="color:#64748b;font-weight:400"> (${e.sc})</span>`:""}${badgeHtml(e.product)}</div>
-            <div class="lesson-meta">${e.group} • ${e.teacher} • ${e.format}</div>
+            <div class="lesson-meta">${e.group} • ${e.teacher} • ${e.format}${e.zoom?` <button id="cb-w-${i}-${day.replace(/\s/g,'')}" class="copy-btn" onclick="copyZoom('${e.zoom.replace(/'/g,"\\'")}','cb-w-${i}-${day.replace(/\s/g,'')}')">🔗 Скопировать</button>`:""}</div>
           </div>
         </div>`;
       });
@@ -350,7 +367,7 @@ function render() {
           <div>
             <div class="day-card-name">${e.child}${e.sc>1?`<span class="day-card-cnt"> — ${e.sc} уч.</span>`:""}</div>
             <div class="tags">${tagHtml(e.product)}<span class="tag tag-gray">${e.format}</span><span class="tag tag-blue">${e.group}</span></div>
-            <div class="teacher">👩‍🏫 ${e.teacher}</div>
+            <div class="teacher">👩‍🏫 ${e.teacher}${e.zoom?` <button id="cb-d-${i}" class="copy-btn" onclick="copyZoom('${e.zoom.replace(/'/g,"\\'")}','cb-d-${i}')">🔗 Скопировать</button>`:""}</div>
           </div>
         </div>`;
       });
@@ -378,6 +395,7 @@ function render() {
             <span class="tr-child">${e.child}</span>
             ${PB[e.product]?`<span class="badge" style="background:${PB[e.product].bg};color:${PB[e.product].c}">${e.product}</span>`:""}
             <span class="tr-group">${e.group}</span>
+            ${e.zoom?`<button id="cb-t-${e.time.replace(':','')}-${e.group.replace(/\s/g,'')}" class="copy-btn" onclick="copyZoom('${e.zoom.replace(/'/g,"\\'")}','cb-t-${e.time.replace(':','')}-${e.group.replace(/\s/g,'')}')">🔗</button>`:""}
           </div>`;
         });
         html+=`</div>`;
