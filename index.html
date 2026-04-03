@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Расписание</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding:16px}
+button{cursor:pointer;border:none;font-family:inherit}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.header h1{font-size:20px;font-weight:800;color:#f8fafc;margin:0}
+.header .sub{font-size:11px;color:#64748b;margin-top:2px}
+.header .sub .spin{color:#fbbf24;margin-left:6px}
+.controls{display:flex;gap:4px}
+.view-btn{padding:5px 12px;border-radius:7px;font-size:11px;font-weight:600;background:#1e293b;color:#94a3b8;transition:all .15s}
+.view-btn.active{background:#3b82f6;color:#fff}
+.refresh-btn{padding:5px 8px;border-radius:7px;background:#1e293b;color:#94a3b8;font-size:13px}
+.day-bar{display:flex;gap:5px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px}
+.day-btn{flex:1 0 auto;min-width:60px;padding:8px 6px;border-radius:10px;text-align:center;background:#1e293b;color:#cbd5e1;transition:all .15s}
+.day-btn .ds{font-size:10px;font-weight:700;opacity:.8}
+.day-btn .dn{font-size:22px;font-weight:900;line-height:1}
+.filter-bar{display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:6px 12px;background:#1e293b;border-radius:8px;font-size:12px}
+.filter-bar .fl{color:#64748b}
+.filter-tag{padding:2px 8px;border-radius:5px;font-weight:600;font-size:12px}
+.clear-btn{margin-left:auto;padding:2px 8px;border-radius:5px;background:#ef4444;color:#fff;font-size:10px;font-weight:700}
+/* week view */
+.day-block{background:#1e293b;border-radius:12px;overflow:hidden;margin-bottom:8px}
+.day-block-header{padding:8px 14px;display:flex;align-items:center;gap:8px}
+.day-block-title{font-size:14px;font-weight:800}
+.day-count{padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;color:#0f172a}
+.lesson-row{display:grid;grid-template-columns:50px 1fr;align-items:center;padding:7px 12px;gap:8px;border-bottom:1px solid #334155}
+.lesson-row:last-child{border-bottom:none}
+.lesson-time{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+.lesson-name{font-size:12px;font-weight:600;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lesson-meta{font-size:10px;color:#94a3b8}
+.badge{padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;margin-left:4px}
+/* day view */
+.day-card{background:#1e293b;border-radius:12px;padding:12px 16px;display:grid;grid-template-columns:60px 1fr;gap:12;align-items:start;margin-bottom:6px;border-left:3px solid transparent}
+.day-card-time{text-align:center}
+.day-card-time .t{font-size:22px;font-weight:900;line-height:1}
+.day-card-time .tz{font-size:9px;color:#475569;margin-top:2px}
+.day-card-name{font-size:14px;font-weight:700;color:#f8fafc}
+.day-card-cnt{font-size:11px;color:#94a3b8;font-weight:400}
+.tags{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+.tag{padding:1px 7px;border-radius:5px;font-size:10px;font-weight:600}
+.tag-gray{background:#374151;color:#d1d5db}
+.tag-blue{background:#1e3a5f;color:#93c5fd}
+.teacher{font-size:11px;color:#94a3b8;margin-top:5px}
+/* teacher view */
+.teacher-block{background:#1e293b;border-radius:12px;overflow:hidden;border:1px solid transparent;margin-bottom:6px}
+.teacher-block.open{border-color:#3b82f6}
+.teacher-btn{width:100%;padding:12px 16px;background:transparent;color:#e2e8f0;text-align:left;display:flex;align-items:center;justify-content:space-between}
+.teacher-name{font-size:14px;font-weight:700}
+.teacher-sub{font-size:10px;color:#94a3b8;margin-top:1px}
+.teacher-cnt{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:#334155;font-size:15px;font-weight:900;color:#94a3b8}
+.teacher-cnt.open{background:#3b82f6;color:#fff}
+.teacher-rows{padding:0 16px 12px}
+.teacher-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid #334155}
+.tr-day{width:26px;text-align:center;font-size:10px;font-weight:700;border-radius:3px;padding:1px 0}
+.tr-time{font-size:12px;font-weight:700;width:40px;font-variant-numeric:tabular-nums}
+.tr-child{font-size:11px;color:#e2e8f0;flex:1}
+.tr-group{font-size:9px;color:#64748b}
+/* stats */
+.stats{margin-top:20px;padding:12px 14px;background:#1e293b;border-radius:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.stat-num{font-size:22px;font-weight:900}
+.stat-lbl{font-size:9px;color:#64748b}
+.footer{text-align:center;font-size:9px;color:#334155;margin-top:8px}
+/* loading / error */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh}
+.spinner{width:40px;height:40px;border:3px solid #334155;border-top-color:#3b82f6;border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loading p{margin-top:14px;color:#94a3b8;font-size:13px}
+.error-box{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center;padding:20px}
+.error-box .icon{font-size:40px;margin-bottom:12px}
+.error-box p{color:#f87171;font-size:14px;max-width:420px}
+.error-box .dbg{color:#475569;font-size:10px;max-width:500px;margin-top:8px;line-height:1.5;word-break:break-all}
+.retry-btn{margin-top:16px;padding:8px 24px;border-radius:8px;background:#3b82f6;color:#fff;font-weight:600}
+.hint{text-align:center;color:#64748b;padding:32px;font-size:13px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const DAYS = ["Понедельник","Вторник","Среда","Четверг","Пятница","Суббота","Воскресенье"];
+const DS = {"Понедельник":"Пн","Вторник":"Вт","Среда":"Ср","Четверг":"Чт","Пятница":"Пт","Суббота":"Сб","Воскресенье":"Вс"};
+const DC = {
+  "Понедельник":{a:"#60a5fa",b:"#1e3a5f80"},
+  "Вторник":{a:"#4ade80",b:"#1a473180"},
+  "Среда":{a:"#fbbf24",b:"#713f1280"},
+  "Четверг":{a:"#fb923c",b:"#7c2d1280"},
+  "Пятница":{a:"#a78bfa",b:"#4c1d9580"},
+  "Суббота":{a:"#34d399",b:"#064e3b80"},
+  "Воскресенье":{a:"#f472b6",b:"#83184380"},
+};
+const PB = {"Python":{bg:"#1e40af",c:"#dbeafe"},"Scratch":{bg:"#b45309",c:"#fef3c7"}};
+const BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT25E4I1fZ4JTPFgPf6CmAUBP-AZugF_qgGTubKybfTSiZ8YiuszkTLAM_h5iFZ_8dk6NCZtZbKElbu/pub?output=csv";
+const PROXIES = [
+  BASE,
+  `https://corsproxy.io/?${encodeURIComponent(BASE)}`,
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(BASE)}`,
+];
+const dayMap = {
+  "пн":"Понедельник","понедельник":"Понедельник","вт":"Вторник","вторник":"Вторник",
+  "ср":"Среда","среда":"Среда","чт":"Четверг","четверг":"Четверг",
+  "пт":"Пятница","пятница":"Пятница","сб":"Суббота","суббота":"Суббота",
+  "вс":"Воскресенье","вск":"Воскресенье","воскресенье":"Воскресенье",
+};
+
+let state = {
+  entries: [], raw: [], loading: true, err: null, dbg: "",
+  upd: null, selD: null, selT: null, view: "week"
+};
+
+function parseSched(s) {
+  if (!s) return [];
+  const out = [];
+  const re = /(Пн|Вт|Ср|Чт|Пт|Сб|Вс|Вск|понедельник|вторник|среда|четверг|пятница|суббота|воскресенье)[а-яА-Я]*\s*(\d{1,2})[:\.](\d{2})/gi;
+  let m;
+  while ((m = re.exec(s)) !== null) {
+    out.push({ day: dayMap[m[1].toLowerCase()] || m[1], time: `${m[2]}:${m[3]}` });
+  }
+  if (!out.length) {
+    let df = null;
+    for (const [k,v] of Object.entries(dayMap)) if (s.toLowerCase().includes(k)) { df=v; break; }
+    const tm = s.match(/(\d{1,2})[:\.](\d{2})/);
+    if (df && tm) out.push({ day:df, time:`${tm[1]}:${tm[2]}` });
+  }
+  return out;
+}
+
+function fc(h, ...ks) {
+  const hl = h.map(x=>(x||"").toString().trim().toLowerCase());
+  for (const k of ks) { const i=hl.findIndex(x=>x.includes(k.toLowerCase())); if(i!==-1)return i; }
+  return -1;
+}
+
+function proc(text) {
+  const p = Papa.parse(text, { skipEmptyLines: true });
+  const rows = p.data;
+  if (!rows||rows.length<2) return {entries:[],dbg:"Нет строк в CSV"};
+  const hdr = rows[0].map(x=>(x||"").trim());
+  const iT=fc(hdr,"Основной преподаватель","преподаватель");
+  const iG=fc(hdr,"Группа");
+  const iS=fc(hdr,"Время занятий");
+  const iF=fc(hdr,"Формат");
+  const iP=fc(hdr,"Продукт");
+  const iPr=fc(hdr,"Имя родителя");
+  const iCh=fc(hdr,"ФИО ребенка","Имя ребенка");
+  const iCo=fc(hdr,"Комментарий");
+  const dbg = `${rows.length} строк | Преп=${iT>=0?"✓":"✗"} Группа=${iG>=0?"✓":"✗"} Расписание=${iS>=0?"✓":"✗"} Ребёнок=${iCh>=0?"✓":"✗"} | ${hdr.slice(0,6).join(", ")}`;
+  const entries = [];
+  for (let i=1;i<rows.length;i++) {
+    const r=rows[i];
+    const child=iCh>=0?(r[iCh]||"").trim():"";
+    const parent=iPr>=0?(r[iPr]||"").trim():"";
+    if(!child&&!parent) continue;
+    const com=iCo>=0?(r[iCo]||"").toUpperCase():"";
+    if(com.includes("ОТЧИСЛЕН")||com.includes("ВОЗВРАТ")) continue;
+    const sched=iS>=0?(r[iS]||""):"";
+    const group=iG>=0?(r[iG]||""):"";
+    const teacher=iT>=0?(r[iT]||"Не назначен"):"Не назначен";
+    const product=iP>=0?(r[iP]||""):"";
+    const format=iF>=0?(r[iF]||""):"";
+    if(!sched||!group) continue;
+    for (const dt of parseSched(sched)) {
+      entries.push({
+        day:dt.day, ds:DS[dt.day]||"?", time:dt.time,
+        group:group.trim(), child:child||"—", parent,
+        teacher:teacher||"Не назначен", product,
+        format:format.includes("Индив")?"Индив.":format.includes("Груп")?"Группа":format,
+      });
+    }
+  }
+  entries.sort((a,b)=>{
+    const d=DAYS.indexOf(a.day)-DAYS.indexOf(b.day);
+    if(d)return d;
+    const ta=a.time.split(":").map(Number), tb=b.time.split(":").map(Number);
+    return(ta[0]*60+(ta[1]||0))-(tb[0]*60+(tb[1]||0));
+  });
+  return {entries,dbg};
+}
+
+function dedup(entries) {
+  const m=new Map(), r=[];
+  for(const e of entries){
+    const k=`${e.day}|${e.time}|${e.group}`;
+    if(m.has(k)){
+      const x=m.get(k);
+      const n=e.child.split(" ")[0];
+      if(!x.child.includes(n))x.child+=`, ${n}`;
+      x.sc++;
+    } else {
+      const x={...e,child:e.child.split(" ")[0],sc:1};
+      m.set(k,x);r.push(x);
+    }
+  }
+  return r;
+}
+
+async function load() {
+  state.loading=true; state.err=null;
+  render();
+  for(const url of PROXIES){
+    try{
+      const res=await fetch(url);
+      if(!res.ok) continue;
+      const text=await res.text();
+      if(!text||text.length<50) continue;
+      const{entries,dbg}=proc(text);
+      if(entries.length>0){
+        state.raw=entries;
+        state.entries=dedup(entries);
+        state.dbg=dbg;
+        state.upd=new Date();
+        state.err=null;
+        state.loading=false;
+        render();
+        return;
+      } else { state.dbg=dbg; }
+    }catch(_){continue;}
+  }
+  state.err="Не удалось загрузить. Убедись, что таблица опубликована и CSV — лист «Реестр учеников»";
+  state.loading=false;
+  render();
+}
+
+function filtered() {
+  let d=state.entries;
+  if(state.selD) d=d.filter(e=>e.day===state.selD);
+  if(state.selT) d=d.filter(e=>e.teacher===state.selT);
+  return d;
+}
+
+function dSum() {
+  return DAYS.map(d=>({d,s:DS[d],n:state.entries.filter(e=>e.day===d).length}));
+}
+
+function teachers() {
+  const m={};
+  for(const e of state.entries){
+    if(!m[e.teacher]) m[e.teacher]={t:e.teacher,n:0,ds:new Set(),ent:[]};
+    m[e.teacher].n++; m[e.teacher].ds.add(e.ds); m[e.teacher].ent.push(e);
+  }
+  return Object.values(m).sort((a,b)=>b.n-a.n);
+}
+
+function badgeHtml(product) {
+  const pb=PB[product];
+  if(!pb) return "";
+  return `<span class="badge" style="background:${pb.bg};color:${pb.c}">${product}</span>`;
+}
+
+function tagHtml(product) {
+  const pb=PB[product];
+  if(!pb) return `<span class="tag tag-gray">${product}</span>`;
+  return `<span class="tag" style="background:${pb.bg};color:${pb.c}">${product}</span>`;
+}
+
+function render() {
+  const app=document.getElementById("app");
+  if(state.loading && !state.entries.length){
+    app.innerHTML=`<div class="loading"><div class="spinner"></div><p>Загрузка из Google Sheets...</p></div>`;
+    return;
+  }
+  if(state.err && !state.entries.length){
+    app.innerHTML=`<div class="error-box"><div class="icon">⚠️</div><p>${state.err}</p><p class="dbg">${state.dbg}</p><button class="retry-btn" onclick="load()">Повторить</button></div>`;
+    return;
+  }
+
+  const filt=filtered();
+  const ds=dSum();
+  const tch=teachers();
+  const total=state.entries.length;
+  const grp=[...new Set(state.entries.map(e=>e.group))].length;
+  const tc=tch.filter(t=>t.t!=="Не назначен").length;
+  const stu=state.raw.length;
+  const updStr=state.upd?state.upd.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}):"—";
+
+  // header
+  let html=`
+  <div class="header">
+    <div>
+      <h1>📅 Расписание</h1>
+      <div class="sub">Live • ${updStr}${state.loading?'<span class="spin">⟳</span>':""}</div>
+    </div>
+    <div class="controls">
+      ${[["week","Неделя"],["day","Дни"],["teacher","Препод."]].map(([v,l])=>
+        `<button class="view-btn${state.view===v?" active":""}" onclick="setView('${v}')">${l}</button>`
+      ).join("")}
+      <button class="refresh-btn" onclick="load()" title="Обновить">🔄</button>
+    </div>
+  </div>`;
+
+  // day bar
+  html+=`<div class="day-bar">`;
+  for(const d of ds){
+    const c=DC[d.d];
+    const sel=state.selD===d.d;
+    html+=`<button class="day-btn" onclick="toggleDay('${d.d}')" style="background:${sel?c.a:"#1e293b"};color:${sel?"#0f172a":"#cbd5e1"};box-shadow:${sel?`0 2px 12px ${c.a}40`:"none"}">
+      <div class="ds">${d.s}</div><div class="dn">${d.n}</div>
+    </button>`;
+  }
+  html+=`</div>`;
+
+  // filter bar
+  if(state.selD||state.selT){
+    html+=`<div class="filter-bar"><span class="fl">Фильтр:</span>`;
+    if(state.selD){const c=DC[state.selD];html+=`<span class="filter-tag" style="background:${c.a}30;color:${c.a}">${state.selD}</span>`;}
+    if(state.selT) html+=`<span class="filter-tag" style="background:#3b82f620;color:#60a5fa">${state.selT}</span>`;
+    html+=`<button class="clear-btn" onclick="clearFilter()">✕</button></div>`;
+  }
+
+  // views
+  if(state.view==="week"){
+    for(const day of DAYS){
+      const ent=filt.filter(e=>e.day===day);
+      if(!ent.length) continue;
+      const c=DC[day];
+      html+=`<div class="day-block" style="border-left:3px solid ${c.a}">
+        <div class="day-block-header" style="background:${c.b}">
+          <span class="day-block-title" style="color:${c.a}">${day}</span>
+          <span class="day-count" style="background:${c.a}">${ent.length}</span>
+        </div>`;
+      ent.forEach((e,i)=>{
+        html+=`<div class="lesson-row" style="${i===ent.length-1?"border-bottom:none":""}">
+          <span class="lesson-time" style="color:${c.a}">${e.time}</span>
+          <div>
+            <div class="lesson-name">${e.child}${e.sc>1?`<span style="color:#64748b;font-weight:400"> (${e.sc})</span>`:""}${badgeHtml(e.product)}</div>
+            <div class="lesson-meta">${e.group} • ${e.teacher} • ${e.format}</div>
+          </div>
+        </div>`;
+      });
+      html+=`</div>`;
+    }
+  }
+
+  if(state.view==="day"){
+    if(!state.selD){
+      html+=`<div class="hint">Нажми на день ☝️</div>`;
+    } else {
+      filt.forEach((e,i)=>{
+        const c=DC[e.day];
+        html+=`<div class="day-card" style="border-left-color:${c.a}">
+          <div class="day-card-time">
+            <div class="t" style="color:${c.a}">${e.time}</div>
+            <div class="tz">МСК</div>
+          </div>
+          <div>
+            <div class="day-card-name">${e.child}${e.sc>1?`<span class="day-card-cnt"> — ${e.sc} уч.</span>`:""}</div>
+            <div class="tags">${tagHtml(e.product)}<span class="tag tag-gray">${e.format}</span><span class="tag tag-blue">${e.group}</span></div>
+            <div class="teacher">👩‍🏫 ${e.teacher}</div>
+          </div>
+        </div>`;
+      });
+    }
+  }
+
+  if(state.view==="teacher"){
+    tch.forEach(t=>{
+      const op=state.selT===t.t;
+      html+=`<div class="teacher-block${op?" open":""}">
+        <button class="teacher-btn" onclick="toggleTeacher('${t.t.replace(/'/g,"\\'")}')">
+          <div>
+            <div class="teacher-name">${t.t}</div>
+            <div class="teacher-sub">${[...t.ds].join(", ")} • ${t.n} ур/нед</div>
+          </div>
+          <div class="teacher-cnt${op?" open":""}">${t.n}</div>
+        </button>`;
+      if(op){
+        html+=`<div class="teacher-rows">`;
+        t.ent.forEach(e=>{
+          const c=DC[e.day];
+          html+=`<div class="teacher-row">
+            <span class="tr-day" style="background:${c.a}30;color:${c.a}">${e.ds}</span>
+            <span class="tr-time" style="color:${c.a}">${e.time}</span>
+            <span class="tr-child">${e.child}</span>
+            ${PB[e.product]?`<span class="badge" style="background:${PB[e.product].bg};color:${PB[e.product].c}">${e.product}</span>`:""}
+            <span class="tr-group">${e.group}</span>
+          </div>`;
+        });
+        html+=`</div>`;
+      }
+      html+=`</div>`;
+    });
+  }
+
+  // stats
+  html+=`<div class="stats">
+    ${[[total,"#3b82f6","Уроков/нед"],[tc,"#10b981","Преподав."],[grp,"#f59e0b","Групп"],[stu,"#a78bfa","Учеников"]].map(([v,c,l])=>
+      `<div><div class="stat-num" style="color:${c}">${v}</div><div class="stat-lbl">${l}</div></div>`
+    ).join("")}
+  </div>
+  <div class="footer">Авто-обновление каждые 5 мин • Google Sheets</div>`;
+
+  app.innerHTML=html;
+}
+
+function setView(v){
+  state.view=v; state.selD=null; state.selT=null; render();
+}
+function toggleDay(d){
+  state.selD=state.selD===d?null:d;
+  if(state.selD) state.view="day";
+  state.selT=null; render();
+}
+function toggleTeacher(t){
+  state.selT=state.selT===t?null:t; render();
+}
+function clearFilter(){
+  state.selD=null; state.selT=null; render();
+}
+
+load();
+setInterval(load, 300000);
+</script>
+</body>
+</html>
