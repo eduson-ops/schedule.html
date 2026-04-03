@@ -236,7 +236,7 @@ function dedup(entries) {
       if(!x.child.includes(n))x.child+=`, ${n}`;
       x.sc++;
     } else {
-      const x={...e,child:e.child.split(" ")[0],sc:1};
+      const x={...e,child:e.child.split(" ")[0],sc:1,_idx:r.length};
       m.set(k,x);r.push(x);
     }
   }
@@ -493,12 +493,6 @@ function render() {
 
   app.innerHTML=html;
   window._sc = state.entries;
-  app.querySelectorAll('.name-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var idx = parseInt(this.getAttribute('data-idx'));
-      openPopupFromStore(idx);
-    });
-  });
 }
 
 function setView(v){
@@ -518,6 +512,16 @@ function clearFilter(){
 
 load();
 setInterval(load, 300000);
+
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('.name-btn');
+  if(btn){
+    var idx = parseInt(btn.getAttribute('data-idx'));
+    if(!isNaN(idx) && window._sc && window._sc[idx]){
+      openPopupData(window._sc[idx]);
+    }
+  }
+});
 </script>
 </body>
 </html>
