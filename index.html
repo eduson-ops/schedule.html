@@ -152,7 +152,7 @@ function proc(text) {
   const iPr=fc(hdr,"Имя родителя");
   const iCh=fc(hdr,"ФИО ребенка","Имя ребенка");
   const iCo=fc(hdr,"Комментарий");
-  const iZ=fc(hdr,"Ссылка на занятие","Zoom","Ссылка на урок","ссылка на встречу","meet");
+  const iZ=fc(hdr,"Ссылка на занятия","Ссылка на занятие","Zoom","Ссылка на урок","ссылка на встречу","meet");
   const dbg = `${rows.length} строк | Преп=${iT>=0?"✓":"✗"} Группа=${iG>=0?"✓":"✗"} Расписание=${iS>=0?"✓":"✗"} Ребёнок=${iCh>=0?"✓":"✗"} | ${hdr.slice(0,6).join(", ")}`;
   const entries = [];
   for (let i=1;i<rows.length;i++) {
