@@ -256,6 +256,18 @@ function copyZoom(url, btnId) {
 }
 
 
+var _popupStore = {};
+var _popupIdx = 0;
+function _storeEntry(e) {
+  var idx = _popupIdx++;
+  _popupStore[idx] = e;
+  return idx;
+}
+function openPopupFromStore(idx) {
+  var e = _popupStore[idx];
+  if(!e) return;
+  openPopupData(e);
+}
 function openPopupData(e) {
   if(!e) return;
   const el = document.getElementById('student-popup');
@@ -418,7 +430,7 @@ function render() {
         html+=`<div class="lesson-row" style="${i===ent.length-1?"border-bottom:none":""}">
           <span class="lesson-time" style="color:${c.a}">${e.time}</span>
           <div>
-            <div class="lesson-name"><button class="name-btn" onclick="openPopupData(this._e)" onmousedown="this._e=${JSON.stringify(e)}}">${e.child}</button>${e.sc>1?`<span style="color:#64748b;font-weight:400"> (${e.sc})</span>`:""}${badgeHtml(e.product)}</div>
+            <div class="lesson-name"><button class="name-btn" onclick="openPopupFromStore(${_storeEntry(e)})">${e.child}</button>${e.sc>1?`<span style="color:#64748b;font-weight:400"> (${e.sc})</span>`:""}${badgeHtml(e.product)}</div>
             <div class="lesson-meta">${e.group} • ${e.teacher} • ${e.format}${e.zoom?` <button id="cb-w-${i}-${day.replace(/\s/g,'')}" class="copy-btn" onclick="copyZoom('${e.zoom.replace(/'/g,"\\'")}','cb-w-${i}-${day.replace(/\s/g,'')}')">🔗 Скопировать</button>`:""}</div>
           </div>
         </div>`;
@@ -439,7 +451,7 @@ function render() {
             <div class="tz">МСК</div>
           </div>
           <div>
-            <div class="day-card-name"><button class="name-btn" onclick="openPopupData(this._e)" onmousedown="this._e=${JSON.stringify(e)}}">${e.child}</button>${e.sc>1?`<span class="day-card-cnt"> — ${e.sc} уч.</span>`:""}</div>
+            <div class="day-card-name"><button class="name-btn" onclick="openPopupFromStore(${_storeEntry(e)})">${e.child}</button>${e.sc>1?`<span class="day-card-cnt"> — ${e.sc} уч.</span>`:""}</div>
             <div class="tags">${tagHtml(e.product)}<span class="tag tag-gray">${e.format}</span><span class="tag tag-blue">${e.group}</span></div>
             <div class="teacher">👩‍🏫 ${e.teacher}${e.zoom?` <button id="cb-d-${i}" class="copy-btn" onclick="copyZoom('${e.zoom.replace(/'/g,"\\'")}','cb-d-${i}')">🔗 Скопировать</button>`:""}</div>
           </div>
@@ -466,7 +478,7 @@ function render() {
           html+=`<div class="teacher-row">
             <span class="tr-day" style="background:${c.a}30;color:${c.a}">${e.ds}</span>
             <span class="tr-time" style="color:${c.a}">${e.time}</span>
-            <span class="tr-child"><button class="name-btn" onclick="openPopupData(this._e)" onmousedown="this._e=${JSON.stringify(e)}}">${e.child}</button></span>
+            <span class="tr-child"><button class="name-btn" onclick="openPopupFromStore(${_storeEntry(e)})">${e.child}</button></span>
             ${PB[e.product]?`<span class="badge" style="background:${PB[e.product].bg};color:${PB[e.product].c}">${e.product}</span>`:""}
             <span class="tr-group">${e.group}</span>
             ${e.zoom?`<button id="cb-t-${e.time.replace(':','')}-${e.group.replace(/\s/g,'')}" class="copy-btn" onclick="copyZoom('${e.zoom.replace(/'/g,"\\'")}','cb-t-${e.time.replace(':','')}-${e.group.replace(/\s/g,'')}')">🔗</button>`:""}
